@@ -56,6 +56,13 @@ function minutesToString(username) {
 			// Если день длился ровно 8 ч 30 мин, не показываем нулевую переработку/недоработку
 			if(overUnderMinutes != 0) {
 				str += ', ' + overUnder + ' ' + minutesToHuman(overUnderMinutes);
+				
+				if(day.inDate != null) {
+					var from = day.inDate.format('HH:mm');
+					var to = 'сейчас';
+					if(day.outDate != null) to = day.outDate.format('HH:mm');
+					str += ' (с ' + from + ' до ' + to + ')';
+				}
 			}			
 			daysStringsArray.push(str);
 			
@@ -90,14 +97,16 @@ function getRemaining(workTimes) {
 				
 		// Если не было выхода, считаем его как сейчас
 		if(outItem == null) {
-			return {day: inDate.isoWeekday(), minutes: moment().diff(inDate, 'minutes')};
+			return {day: inDate.isoWeekday(), minutes: moment().diff(inDate, 'minutes'), inDate: inDate};
 		}
 		
 		var outDate = moment(outItem.date);
 		
 		return {
 			day: inDate.isoWeekday(),
-			minutes: outDate.diff(inDate, 'minutes')
+			minutes: outDate.diff(inDate, 'minutes'),
+			inDate: inDate,
+			outDate: outDate
 		};
 	});
 	
