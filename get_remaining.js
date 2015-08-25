@@ -39,17 +39,22 @@ function minutesToString(username) {
 		var daysArray = getRemaining(data);
 // 		console.log(daysArray);
 
-		// Массив дней недели и данным по ним (в виде строк)
-		var daysStringsArray = [];
+		// Массив дней недели и данным по ним
+		var daysObjectsArray = [];
 		
 		// Если некоторые дни были пропущены, считаем их как отработанные полный рабочий день
 		leftMinutes -= (daysPassed - daysArray.length) * WORK_DAY_MINUTES;
+		
+		var totalOverUnderTime = 0;
 		
 		daysArray.forEach(function(day) {
 			
 			// Переработка или недоработка
 			var overUnder = day.minutes > WORK_DAY_MINUTES ? 'переработка' : 'недоработка';
 			var overUnderMinutes = Math.abs((leftMinutes >= WORK_DAY_MINUTES ? WORK_DAY_MINUTES : leftMinutes) - day.minutes);
+			if(day.outDate != null) {
+				totalOverUnderTime += day.minutes > WORK_DAY_MINUTES ? overUnderMinutes : -overUnderMinutes;				
+			}			
 			
 			var str = weekdays[day.day] + ': ' + minutesToHuman(day.minutes);
 			
@@ -63,22 +68,58 @@ function minutesToString(username) {
 					if(day.outDate != null) to = day.outDate.format('HH:mm');
 					str += ' (с ' + from + ' до ' + to + ')';
 				}
-			}			
-			daysStringsArray.push(str);
+			}
+			daysObjectsArray.push({
+				str: str,
+				inDate: from,
+				outDate: to
+			});
 			
 			leftMinutes -= day.minutes;
 		});
 		
-		var lastDayMinutes = 0;
-		if(daysArray.length > 0) lastDayMinutes = daysArray[daysArray.length - 1].minutes;
+		
+		var latestDay = {
+			day: moment(),
+			minutes: 0,
+			inDate: moment()
+		};
+		if(daysArray.length > 0) latestDay = daysArray[daysArray.length - 1];
 		
 		// Подсчет окончания рабочего дня
 		// Если на неделе осталось отработать больше одного рабочего дня, тогда считаем с учетом того, что уже было отработано сегодня
 		// В противном случае (по пятницам, например), конец дня это сейчас + сколько осталось отработать всего
-		var endOfCurrentDay = moment().add((leftMinutes >= WORK_DAY_MINUTES ? WORK_DAY_MINUTES - lastDayMinutes : leftMinutes), 'minutes');		
+		var endOfCurrentDay = moment().add((leftMinutes >= WORK_DAY_MINUTES ? WORK_DAY_MINUTES - latestDay.minutes : leftMinutes), 'minutes');
+		
+		// Количество минут, которые в среднем надо отработать оставшиеся дни в день
+		if(daysArray.length > 0) {
+			var minutesPerLeftDays = WORK_DAY_MINUTES - (totalOverUnderTime / (5 - daysArray.length + 1)).floor();			
+		}
+		else {			
+			var minutesPerLeftDays = WORK_DAY_MINUTES;
+		}
+		
+		// Время рекомендованного конца рабочего дня
+		var recommendedEndOfCurrentDay = latestDay.inDate.add(minutesPerLeftDays, 'minutes');
+		
+		
+		var result = {
+			daysObjectsArray: daysObjectsArray,
+			
+			// Осталось всего
+			left: minutesToHuman(leftMinutes),
+			
+			// Осталось примерно в день
+			leftPerDay: minutesToHuman(minutesPerLeftDays),
+			
+			// Идеальный конец рабочего дня
+			endDay: endOfCurrentDay.format('HH:mm'),
+			
+			// 'Рекомендуемый конец рабочего дня
+			recommendedEndDay: recommendedEndOfCurrentDay.format('HH:mm'),
+		};
 
-		return daysStringsArray.join('<br>') + '<br><br>Осталось ' + minutesToHuman(leftMinutes) + 
-			'<br>Идеальный конец рабочего дня в ' + endOfCurrentDay.format('HH:mm');
+		return result;
 	});	
 };
 
