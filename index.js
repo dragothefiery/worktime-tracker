@@ -28,7 +28,10 @@ app.set('basepath', __dirname + '/views')
 
 app.get('/', routes.root);
 app.post('/check', routes.check);
+app.post('/subscribe', routes.subscribe);
 app.post('/editDay/:dayIndex', routes.editDay);
+
+app.get('/newsheader', routes.newsHeader);
 
 // Способ запускать методы через обычный запрос
 app.post('/method', routes.method);

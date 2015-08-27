@@ -72,7 +72,9 @@ function minutesToString(username) {
 			daysObjectsArray.push({
 				str: str,
 				inDate: from,
-				outDate: to
+				outDate: to,
+				day: day.day,
+				fake: day.fake
 			});
 			
 			leftMinutes -= day.minutes;
@@ -89,11 +91,15 @@ function minutesToString(username) {
 		// Подсчет окончания рабочего дня
 		// Если на неделе осталось отработать больше одного рабочего дня, тогда считаем с учетом того, что уже было отработано сегодня
 		// В противном случае (по пятницам, например), конец дня это сейчас + сколько осталось отработать всего
-		var endOfCurrentDay = moment().add((leftMinutes >= WORK_DAY_MINUTES ? WORK_DAY_MINUTES - latestDay.minutes : leftMinutes), 'minutes');
+// 		var endOfCurrentDay = moment().add((leftMinutes >= WORK_DAY_MINUTES ? WORK_DAY_MINUTES - latestDay.minutes : leftMinutes), 'minutes');
+// 		
+		// Подсчет идеального окончания рабочего дня
+		// Время прихода сегодня + 8 ч 30 мин
+		var endOfCurrentDay = moment(latestDay.inDate).add(WORK_DAY_MINUTES, 'minutes');	
 		
 		// Количество минут, которые в среднем надо отработать оставшиеся дни в день
 		if(daysArray.length > 0) {
-			var minutesPerLeftDays = WORK_DAY_MINUTES - (totalOverUnderTime / (5 - daysArray.length + 1)).floor();			
+			var minutesPerLeftDays = WORK_DAY_MINUTES - (totalOverUnderTime / (5 - daysArray.length + 1)).floor();		
 		}
 		else {			
 			var minutesPerLeftDays = WORK_DAY_MINUTES;
@@ -151,9 +157,19 @@ function getRemaining(workTimes) {
 		};
 	});
 	
+	var weekdays = data.map(function(day) { return day.day; });
+	var currentWeekday = moment().isoWeekday();
 	
+	// Заполняем пропущенные дни значениями по умолчанию
+	(1).upto(currentWeekday).forEach(function(weekday, index) {
+		if(weekdays.indexOf(weekday) === -1) {
+			var date = moment().startOf('isoweek').add(weekday, 'days');
+			data.insert({fake: true, day: weekday, minutes: WORK_DAY_MINUTES, inDate: date.hours(9).minutes(0), outDate: date.hours(17).minutes(30)}, index);
+		}
+	});
 	
 	return data;
 };
 
 module.exports = minutesToString;
+module.exports.minutesToHuman = minutesToHuman;
